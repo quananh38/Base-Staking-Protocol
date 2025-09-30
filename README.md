@@ -31,7 +31,7 @@ base-staking-protocol/
 🚀 Installation and Setup
 
 1. Clone the repository
-git clone https://github.com/yourusername/base-staking-protocol.git
+git clone https://github.com/quananh38/Base-Staking-Protocol.git
 cd base-staking-protocol
 2. Install dependencies
 npm install
@@ -93,20 +93,16 @@ struct StakingInfo {
     uint256 lastRewardUpdate;
 }
 User Structure:
-solidity
 
-
-1
-2
-3
-4
-5
 struct UserInfo {
     mapping(address => StakingInfo) stakingInfo;
     uint256 totalStaked;
     uint256 totalRewards;
 }
+
+
 ⚡ Deployment Process
+
 Prerequisites:
 Node.js >= 14.x
 npm >= 6.x
@@ -116,13 +112,13 @@ ERC-20 tokens for staking
 Deployment Steps:
 Configure your hardhat.config.js with Base network settings
 Set your private key in .env file
+
 Run deployment script:
-bash
-
-
-1
 npx hardhat run scripts/deploy.js --network base
+
+
 🔒 Security Considerations
+
 Security Measures:
 Reentrancy Protection - Using OpenZeppelin's ReentrancyGuard
 Input Validation - Comprehensive input validation
@@ -130,11 +126,15 @@ Access Control - Role-based access control
 Emergency Pause - Emergency pause mechanism
 Gas Optimization - Efficient gas usage patterns
 Time Locks - Time-based locking mechanisms
+
 Audit Status:
 Initial security audit completed
 Formal verification in progress
 Community review underway
+
+
 📈 Performance Metrics
+
 Gas Efficiency:
 Stake operation: ~70,000 gas
 Unstake operation: ~60,000 gas
@@ -143,7 +143,9 @@ Parameter update: ~30,000 gas
 Transaction Speed:
 Average confirmation time: < 2 seconds
 Peak throughput: 150+ transactions/second
+
 🔄 Future Enhancements
+
 Planned Features:
 Advanced Governance - Staking-weighted governance voting
 Staking Pools - Specialized staking pools for different assets
@@ -151,26 +153,19 @@ NFT Integration - NFT-based staking and rewards
 Liquidity Staking - Staking with liquidity provision
 AI-Powered Optimization - Smart staking recommendations
 Cross-Chain Staking - Multi-chain staking capabilities
-🤝 Contributing
-We welcome contributions to improve the Base Staking Protocol:
 
+
+🤝 Contributing
+
+We welcome contributions to improve the Base Staking Protocol:
 Fork the repository
 Create your feature branch (git checkout -b feature/AmazingFeature)
 Commit your changes (git commit -m 'Add some AmazingFeature')
 Push to the branch (git push origin feature/AmazingFeature)
 Open a pull request
+
 📄 License
+
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-📞 Support
-For support, please open an issue on our GitHub repository or contact us at:
-
-Email: support@basestakingprotocol.com
-Twitter: @BaseStakingProtocol
-Discord: Base Staking Protocol Community
-🌐 Links
-GitHub Repository: https://github.com/yourusername/base-staking-protocol
-Base Network: https://base.org
-Documentation: https://docs.basestakingprotocol.com
-Community Forum: https://community.basestakingprotocol.com
 Built with ❤️ on Base Network
