@@ -1,27 +1,20 @@
 Base Staking Protocol
+
 📋 Project Description
+
 Base Staking Protocol is a decentralized staking solution that allows users to stake their tokens and earn rewards over time. The protocol provides secure, efficient staking with flexible terms and automated reward distribution.
 
 🔧 Technologies Used
+
 Programming Language: Solidity 0.8.0
 Framework: Hardhat
 Network: Base Network
 Standards: ERC-20
 Libraries: OpenZeppelin, Chainlink
+
+
 🏗️ Project Architecture
 
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
 base-staking-protocol/
 ├── contracts/
 │   ├── StakingProtocol.sol
@@ -33,40 +26,25 @@ base-staking-protocol/
 ├── hardhat.config.js
 ├── package.json
 └── README.md
+
+
 🚀 Installation and Setup
+
 1. Clone the repository
-bash
-
-
-1
-2
 git clone https://github.com/yourusername/base-staking-protocol.git
 cd base-staking-protocol
 2. Install dependencies
-bash
-
-
-1
 npm install
 3. Compile contracts
-bash
-
-
-1
 npx hardhat compile
 4. Run tests
-bash
-
-
-1
 npx hardhat test
 5. Deploy to Base network
-bash
-
-
-1
 npx hardhat run scripts/deploy.js --network base
+
+
 💰 Features
+
 Core Functionality:
 ✅ Token staking with rewards
 ✅ Flexible staking periods
@@ -74,6 +52,7 @@ Core Functionality:
 ✅ Withdrawal flexibility
 ✅ Staking analytics
 ✅ Risk management
+
 Advanced Features:
 Variable APR - Dynamic annual percentage rates
 Multiple Staking Terms - Different staking durations
@@ -81,7 +60,10 @@ Reward Compounding - Automatic reward reinvestment
 Lock-up Periods - Locked staking for longer rewards
 Governance Integration - Staking-weighted governance
 Emergency Withdrawal - Emergency withdrawal options
+
+
 🛠️ Smart Contract Functions
+
 Core Functions:
 stake(address token, uint256 amount, uint256 duration) - Stake tokens for specified duration
 unstake(address token, uint256 amount) - Withdraw staked tokens
@@ -89,25 +71,19 @@ claimRewards(address token) - Claim accumulated rewards
 getStakingInfo(address user, address token) - Get user staking information
 calculateRewards(address user, address token) - Calculate pending rewards
 updateStakingParameters(uint256 newAPR, uint256 newLockupPeriod) - Update staking parameters
+
 Events:
 Staked - Emitted when tokens are staked
 Unstaked - Emitted when tokens are unstaked
 RewardsClaimed - Emitted when rewards are claimed
 StakingParametersUpdated - Emitted when staking parameters are updated
 RewardCompounded - Emitted when rewards are compounded
+
+
 📊 Contract Structure
+
 Staking Structure:
-solidity
 
-
-1
-2
-3
-4
-5
-6
-7
-8
 struct StakingInfo {
     uint256 amount;
     uint256 stakingStartTime;
