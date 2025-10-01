@@ -1,4 +1,4 @@
-// base-staking-protocol/scripts/security-audit.js
+
 const { ethers } = require("hardhat");
 const fs = require("fs");
 
