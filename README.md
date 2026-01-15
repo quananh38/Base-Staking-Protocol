@@ -4,7 +4,7 @@ Base Staking Protocol
 
 Base Staking Protocol is a decentralized staking solution that allows users to stake their tokens and earn rewards over time. The protocol provides secure, efficient staking with flexible terms and automated reward distribution.
 
-🔧 Technologies Used
+🔧 Technologies Used 
 
 Programming Language: Solidity 0.8.0
 Framework: Hardhat
