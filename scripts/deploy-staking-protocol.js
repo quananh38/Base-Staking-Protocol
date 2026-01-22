@@ -9,7 +9,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  // Деплой токена
+
   const StakingToken = await ethers.getContractFactory("ERC20Token");
   const stakingToken = await StakingToken.deploy("Staking Token", "STK");
   await stakingToken.deployed();
