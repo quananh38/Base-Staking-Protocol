@@ -14,7 +14,7 @@ async function main() {
   const stakingToken = await StakingToken.deploy("Staking Token", "STK");
   await stakingToken.deployed();
 
-  // Деплой Staking Protocol контракта
+
   const StakingProtocol = await ethers.getContractFactory("StakingProtocolV2");
   const stakingProtocol = await StakingProtocol.deploy(
     stakingToken.address,
