@@ -31,7 +31,7 @@ async function performStakingProtocolSecurityAudit() {
       auditStatus: auditSummary.auditStatus
     };
     
-    // Оценка уязвимостей
+
     const vulnerabilityAssessment = await staking.getVulnerabilityAssessment();
     securityReport.vulnerabilityAssessment = {
       criticalVulnerabilities: vulnerabilityAssessment.criticalVulnerabilities.toString(),
