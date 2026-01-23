@@ -20,7 +20,7 @@ async function performStakingProtocolSecurityAudit() {
   };
   
   try {
-    // Сводка аудита
+  
     const auditSummary = await staking.getAuditSummary();
     securityReport.auditSummary = {
       totalTests: auditSummary.totalTests.toString(),
