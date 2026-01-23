@@ -8,7 +8,7 @@ async function performStakingProtocolSecurityAudit() {
   const stakingAddress = "0x...";
   const staking = await ethers.getContractAt("StakingProtocolV2", stakingAddress);
   
-  // Аудит безопасности
+
   const securityReport = {
     timestamp: new Date().toISOString(),
     stakingAddress: stakingAddress,
