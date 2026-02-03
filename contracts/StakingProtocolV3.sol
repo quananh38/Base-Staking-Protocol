@@ -509,4 +509,168 @@ contract StakingProtocolV2 is Ownable, ReentrancyGuard {
             staker.lastClaimTime
         );
     }
+    // Добавить структуры:
+struct TokenType {
+    string name;
+    uint256 riskLevel;
+    uint256 rewardMultiplier;
+    uint256 maxStake;
+    uint256 minStake;
+    bool enabled;
+    uint256 lockupPeriod;
+    uint256 performanceFee;
+    uint256 withdrawalFee;
+    string description;
+}
+
+struct UserTokenType {
+    address user;
+    string tokenType;
+    uint256 assignedTime;
+    uint256 expirationTime;
+    bool active;
+}
+
+// Добавить маппинги:
+mapping(string => TokenType) public tokenTypes;
+mapping(address => UserTokenType) public userTokenTypes;
+
+// Добавить события:
+event TokenTypeCreated(
+    string indexed tokenType,
+    uint256 riskLevel,
+    uint256 rewardMultiplier,
+    string description
+);
+
+event TokenTypeUpdated(
+    string indexed tokenType,
+    uint256 riskLevel,
+    uint256 rewardMultiplier
+);
+
+event UserTokenTypeAssigned(
+    address indexed user,
+    string indexed tokenType,
+    uint256 assignedTime
+);
+
+event TokenTypeRemoved(
+    string indexed tokenType
+);
+
+// Добавить функции:
+function createTokenType(
+    string memory tokenTypeName,
+    uint256 riskLevel,
+    uint256 rewardMultiplier,
+    uint256 maxStake,
+    uint256 minStake,
+    uint256 lockupPeriod,
+    uint256 performanceFee,
+    uint256 withdrawalFee,
+    string memory description
+) external onlyOwner {
+    require(bytes(tokenTypeName).length > 0, "Token type name cannot be empty");
+    require(riskLevel <= 10000, "Risk level too high");
+    require(rewardMultiplier <= 10000, "Reward multiplier too high");
+    require(maxStake >= minStake, "Invalid stake limits");
+    
+    tokenTypes[tokenTypeName] = TokenType({
+        name: tokenTypeName,
+        riskLevel: riskLevel,
+        rewardMultiplier: rewardMultiplier,
+        maxStake: maxStake,
+        minStake: minStake,
+        enabled: true,
+        lockupPeriod: lockupPeriod,
+        performanceFee: performanceFee,
+        withdrawalFee: withdrawalFee,
+        description: description
+    });
+    
+    emit TokenTypeCreated(tokenTypeName, riskLevel, rewardMultiplier, description);
+}
+
+function updateTokenType(
+    string memory tokenTypeName,
+    uint256 riskLevel,
+    uint256 rewardMultiplier,
+    uint256 maxStake,
+    uint256 minStake,
+    uint256 lockupPeriod,
+    uint256 performanceFee,
+    uint256 withdrawalFee
+) external onlyOwner {
+    require(tokenTypes[tokenTypeName].name.length > 0, "Token type not found");
+    require(riskLevel <= 10000, "Risk level too high");
+    require(rewardMultiplier <= 10000, "Reward multiplier too high");
+    require(maxStake >= minStake, "Invalid stake limits");
+    
+    TokenType storage tokenType = tokenTypes[tokenTypeName];
+    tokenType.riskLevel = riskLevel;
+    tokenType.rewardMultiplier = rewardMultiplier;
+    tokenType.maxStake = maxStake;
+    tokenType.minStake = minStake;
+    tokenType.lockupPeriod = lockupPeriod;
+    tokenType.performanceFee = performanceFee;
+    tokenType.withdrawalFee = withdrawalFee;
+    
+    emit TokenTypeUpdated(tokenTypeName, riskLevel, rewardMultiplier);
+}
+
+function assignUserTokenType(
+    address user,
+    string memory tokenTypeName,
+    uint256 duration
+) external onlyOwner {
+    require(tokenTypes[tokenTypeName].name.length > 0, "Token type not found");
+    require(tokenTypes[tokenTypeName].enabled, "Token type not enabled");
+    
+    UserTokenType storage userToken = userTokenTypes[user];
+    userToken.user = user;
+    userToken.tokenType = tokenTypeName;
+    userToken.assignedTime = block.timestamp;
+    userToken.expirationTime = block.timestamp + duration;
+    userToken.active = true;
+    
+    emit UserTokenTypeAssigned(user, tokenTypeName, block.timestamp);
+}
+
+function removeUserTokenType(address user) external {
+    require(userTokenTypes[user].user == user, "No token type assigned");
+    
+    UserTokenType storage userToken = userTokenTypes[user];
+    userToken.active = false;
+    
+    emit UserTokenTypeAssigned(user, userToken.tokenType, block.timestamp);
+}
+
+function getTokenTypeInfo(string memory tokenTypeName) external view returns (TokenType memory) {
+    return tokenTypes[tokenTypeName];
+}
+
+function getUserTokenType(address user) external view returns (UserTokenType memory) {
+    return userTokenTypes[user];
+}
+
+function getActiveTokenTypes() external view returns (string[] memory) {
+    // Implementation would return all active token types
+    return new string[](0);
+}
+
+function validateUserTokenType(address user, string memory tokenTypeName) external view returns (bool) {
+    UserTokenType storage userToken = userTokenTypes[user];
+    TokenType storage tokenType = tokenTypes[tokenTypeName];
+    
+    if (!userToken.active || !tokenType.enabled) {
+        return false;
+    }
+    
+    if (block.timestamp > userToken.expirationTime) {
+        return false;
+    }
+    
+    return keccak256(abi.encodePacked(userToken.tokenType)) == keccak256(abi.encodePacked(tokenTypeName));
+}
 }
