@@ -1202,12 +1202,12 @@ contract StakingProtocol is Ownable, ReentrancyGuard {
     }
     
     function getNFTStakingTierByPower(uint256 stakingPower) external view returns (string memory) {
-        // Возвращает тайер по мощности
+    
         return "";
     }
     
     function getNFTStakingHistory(address user) external view returns (NFTStake[] memory) {
-        // Возвращает историю стейкинга пользователя
+ 
         return new NFTStake[](0);
     }
     
