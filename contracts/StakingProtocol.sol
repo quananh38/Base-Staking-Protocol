@@ -673,4 +673,547 @@ function validateUserTokenType(address user, string memory tokenTypeName) extern
     
     return keccak256(abi.encodePacked(userToken.tokenType)) == keccak256(abi.encodePacked(tokenTypeName));
 }
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+contract StakingProtocol is Ownable, ReentrancyGuard {
+    using SafeMath for uint256;
+
+    // Существующие структуры и функции...
+    
+    // Новые структуры для NFT-базированного стейкинга
+    struct NFTStake {
+        uint256 tokenId;
+        address staker;
+        address nftContract;
+        uint256 stakeTime;
+        uint256 stakingDuration;
+        bool isStaked;
+        uint256 rewardMultiplier;
+        uint256 stakingPower;
+        uint256 lastRewardTime;
+        uint256 totalRewardsEarned;
+        uint256 firstStakeTime;
+        uint256 lastClaimTime;
+        uint256 pendingRewards;
+        uint256[] stakingHistory;
+        string nftType;
+        uint256 nftRarity;
+        uint256 lockupPeriod;
+        uint256 performanceFee;
+        uint256 withdrawalFee;
+        uint256 rewardDebt;
+    }
+    
+    struct NFTStakingTier {
+        string tierName;
+        uint256 minStakingPower;
+        uint256 maxStakingPower;
+        uint256 rewardMultiplier;
+        uint256 lockupPeriod;
+        uint256 performanceFee;
+        uint256 withdrawalFee;
+        bool enabled;
+        uint256 maxStakers;
+        uint256 currentStakers;
+        uint256 maxStakeAmount;
+        uint256 minStakeAmount;
+    }
+    
+    struct NFTStakingConfig {
+        address nftContract;
+        uint256 defaultRewardMultiplier;
+        uint256 defaultLockupPeriod;
+        uint256 defaultPerformanceFee;
+        uint256 defaultWithdrawalFee;
+        bool enabled;
+        uint256 maxStakers;
+        uint256 lastUpdateTime;
+    }
+    
+    struct NFTStakingStats {
+        uint256 totalStakedNFTs;
+        uint256 totalStakers;
+        uint256 totalRewardsDistributed;
+        uint256 averageStakingPower;
+        uint256 totalValueLocked;
+        uint256 stakingDuration;
+        uint256 successRate;
+    }
+    
+    // Новые маппинги
+    mapping(address => mapping(uint256 => NFTStake)) public nftStakes;
+    mapping(address => NFTStakingTier) public nftStakingTiers;
+    mapping(address => NFTStakingConfig) public nftStakingConfigs;
+    mapping(address => mapping(uint256 => uint256[])) public userNFTStakes;
+    mapping(address => NFTStakingStats) public nftStakingStats;
+    
+    // Новые события
+    event NFTStaked(
+        address indexed staker,
+        address indexed nftContract,
+        uint256 indexed tokenId,
+        uint256 stakingPower,
+        uint256 rewardMultiplier,
+        uint256 stakingDuration,
+        uint256 timestamp
+    );
+    
+    event NFTUnstaked(
+        address indexed staker,
+        address indexed nftContract,
+        uint256 indexed tokenId,
+        uint256 rewards,
+        uint256 timestamp
+    );
+    
+    event NFTStakingTierCreated(
+        string indexed tierName,
+        uint256 minStakingPower,
+        uint256 maxStakingPower,
+        uint256 rewardMultiplier,
+        uint256 lockupPeriod,
+        uint256 performanceFee,
+        uint256 withdrawalFee
+    );
+    
+    event NFTStakingConfigUpdated(
+        address indexed nftContract,
+        uint256 defaultRewardMultiplier,
+        uint256 defaultLockupPeriod,
+        uint256 defaultPerformanceFee,
+        uint256 defaultWithdrawalFee,
+        bool enabled
+    );
+    
+    event NFTStakingTierUpdated(
+        string indexed tierName,
+        uint256 minStakingPower,
+        uint256 maxStakingPower,
+        uint256 rewardMultiplier,
+        uint256 lockupPeriod,
+        uint256 performanceFee,
+        uint256 withdrawalFee
+    );
+    
+    event NFTStakingRewardsClaimed(
+        address indexed staker,
+        address indexed nftContract,
+        uint256 indexed tokenId,
+        uint256 rewards,
+        uint256 timestamp
+    );
+    
+    event NFTStakingPowerUpdated(
+        address indexed staker,
+        address indexed nftContract,
+        uint256 indexed tokenId,
+        uint256 oldPower,
+        uint256 newPower,
+        uint256 timestamp
+    );
+    
+    // Новые функции для NFT-базированного стейкинга
+    function createNFTStakingTier(
+        string memory tierName,
+        uint256 minStakingPower,
+        uint256 maxStakingPower,
+        uint256 rewardMultiplier,
+        uint256 lockupPeriod,
+        uint256 performanceFee,
+        uint256 withdrawalFee,
+        uint256 maxStakers,
+        uint256 maxStakeAmount,
+        uint256 minStakeAmount
+    ) external onlyOwner {
+        require(bytes(tierName).length > 0, "Tier name cannot be empty");
+        require(minStakingPower <= maxStakingPower, "Invalid staking power range");
+        require(rewardMultiplier >= 1000, "Reward multiplier too low");
+        require(lockupPeriod > 0, "Lockup period must be greater than 0");
+        require(performanceFee <= 10000, "Performance fee too high");
+        require(withdrawalFee <= 10000, "Withdrawal fee too high");
+        require(maxStakers > 0, "Max stakers must be greater than 0");
+        require(maxStakeAmount >= minStakeAmount, "Invalid stake amount range");
+        
+        nftStakingTiers[tierName] = NFTStakingTier({
+            tierName: tierName,
+            minStakingPower: minStakingPower,
+            maxStakingPower: maxStakingPower,
+            rewardMultiplier: rewardMultiplier,
+            lockupPeriod: lockupPeriod,
+            performanceFee: performanceFee,
+            withdrawalFee: withdrawalFee,
+            enabled: true,
+            maxStakers: maxStakers,
+            currentStakers: 0,
+            maxStakeAmount: maxStakeAmount,
+            minStakeAmount: minStakeAmount
+        });
+        
+        emit NFTStakingTierCreated(
+            tierName,
+            minStakingPower,
+            maxStakingPower,
+            rewardMultiplier,
+            lockupPeriod,
+            performanceFee,
+            withdrawalFee
+        );
+    }
+    
+    function updateNFTStakingTier(
+        string memory tierName,
+        uint256 minStakingPower,
+        uint256 maxStakingPower,
+        uint256 rewardMultiplier,
+        uint256 lockupPeriod,
+        uint256 performanceFee,
+        uint256 withdrawalFee
+    ) external onlyOwner {
+        require(bytes(tierName).length > 0, "Tier name cannot be empty");
+        require(nftStakingTiers[tierName].tierName.length > 0, "Tier not found");
+        require(minStakingPower <= maxStakingPower, "Invalid staking power range");
+        require(rewardMultiplier >= 1000, "Reward multiplier too low");
+        require(lockupPeriod > 0, "Lockup period must be greater than 0");
+        require(performanceFee <= 10000, "Performance fee too high");
+        require(withdrawalFee <= 10000, "Withdrawal fee too high");
+        
+        NFTStakingTier storage tier = nftStakingTiers[tierName];
+        tier.minStakingPower = minStakingPower;
+        tier.maxStakingPower = maxStakingPower;
+        tier.rewardMultiplier = rewardMultiplier;
+        tier.lockupPeriod = lockupPeriod;
+        tier.performanceFee = performanceFee;
+        tier.withdrawalFee = withdrawalFee;
+        
+        emit NFTStakingTierUpdated(
+            tierName,
+            minStakingPower,
+            maxStakingPower,
+            rewardMultiplier,
+            lockupPeriod,
+            performanceFee,
+            withdrawalFee
+        );
+    }
+    
+    function setNFTStakingConfig(
+        address nftContract,
+        uint256 defaultRewardMultiplier,
+        uint256 defaultLockupPeriod,
+        uint256 defaultPerformanceFee,
+        uint256 defaultWithdrawalFee,
+        bool enabled,
+        uint256 maxStakers
+    ) external onlyOwner {
+        require(nftContract != address(0), "Invalid NFT contract");
+        require(defaultRewardMultiplier >= 1000, "Reward multiplier too low");
+        require(defaultLockupPeriod > 0, "Lockup period must be greater than 0");
+        require(defaultPerformanceFee <= 10000, "Performance fee too high");
+        require(defaultWithdrawalFee <= 10000, "Withdrawal fee too high");
+        require(maxStakers > 0, "Max stakers must be greater than 0");
+        
+        nftStakingConfigs[nftContract] = NFTStakingConfig({
+            nftContract: nftContract,
+            defaultRewardMultiplier: defaultRewardMultiplier,
+            defaultLockupPeriod: defaultLockupPeriod,
+            defaultPerformanceFee: defaultPerformanceFee,
+            defaultWithdrawalFee: defaultWithdrawalFee,
+            enabled: enabled,
+            maxStakers: maxStakers,
+            lastUpdateTime: block.timestamp
+        });
+        
+        emit NFTStakingConfigUpdated(
+            nftContract,
+            defaultRewardMultiplier,
+            defaultLockupPeriod,
+            defaultPerformanceFee,
+            defaultWithdrawalFee,
+            enabled
+        );
+    }
+    
+    function stakeNFT(
+        address nftContract,
+        uint256 tokenId,
+        uint256 stakingDuration,
+        string memory nftType,
+        uint256 nftRarity,
+        uint256 stakingPower
+    ) external {
+        require(nftStakingConfigs[nftContract].enabled, "NFT staking not enabled");
+        require(ERC721(nftContract).ownerOf(tokenId) == msg.sender, "Not NFT owner");
+        require(stakingDuration > 0, "Staking duration must be greater than 0");
+        require(stakingPower > 0, "Staking power must be greater than 0");
+        
+        // Проверка, что NFT не находится в стейкинге
+        require(nftStakes[nftContract][tokenId].tokenId != tokenId, "NFT already staked");
+        
+        // Проверка ставки по тайеру
+        uint256 tierIndex = 0;
+        bool tierFound = false;
+        string[] memory tierNames = new string[](100); // Максимум 100 тайеров
+        uint256 tierCount = 0;
+        
+        // Простой поиск тайера (в реальной реализации нужно более сложный механизм)
+        for (uint256 i = 0; i < 100; i++) {
+            if (bytes(nftStakingTiers[bytes32(i)].tierName).length > 0) {
+                tierNames[tierCount] = string(abi.encodePacked(bytes32(i)));
+                tierCount++;
+                if (stakingPower >= nftStakingTiers[bytes32(i)].minStakingPower &&
+                    stakingPower <= nftStakingTiers[bytes32(i)].maxStakingPower) {
+                    tierIndex = i;
+                    tierFound = true;
+                    break;
+                }
+            }
+        }
+        
+        NFTStakingTier storage tier = nftStakingTiers[bytes32(tierIndex)];
+        if (!tierFound) {
+            // Использовать базовый тайер
+            tier = nftStakingTiers[bytes32(0)];
+        }
+        
+        // Проверка ограничений тайера
+        require(stakingPower >= tier.minStakingPower, "Staking power below minimum");
+        require(stakingPower <= tier.maxStakingPower, "Staking power above maximum");
+        require(tier.currentStakers < tier.maxStakers, "Tier full");
+        
+        // Проверка количества стейкеров
+        if (nftStakingStats[nftContract].totalStakers >= nftStakingConfigs[nftContract].maxStakers) {
+            revert("NFT staking limit reached");
+        }
+        
+        // Создание стейкинг записи
+        uint256 stakeId = uint256(keccak256(abi.encodePacked(nftContract, tokenId, block.timestamp)));
+        
+        nftStakes[nftContract][tokenId] = NFTStake({
+            tokenId: tokenId,
+            staker: msg.sender,
+            nftContract: nftContract,
+            stakeTime: block.timestamp,
+            stakingDuration: stakingDuration,
+            isStaked: true,
+            rewardMultiplier: tier.rewardMultiplier,
+            stakingPower: stakingPower,
+            lastRewardTime: block.timestamp,
+            totalRewardsEarned: 0,
+            firstStakeTime: block.timestamp,
+            lastClaimTime: 0,
+            pendingRewards: 0,
+            stakingHistory: new uint256[](1),
+            nftType: nftType,
+            nftRarity: nftRarity,
+            lockupPeriod: tier.lockupPeriod,
+            performanceFee: tier.performanceFee,
+            withdrawalFee: tier.withdrawalFee,
+            rewardDebt: 0
+        });
+        
+        // Добавить в историю пользователя
+        userNFTStakes[msg.sender][nftContract].push(tokenId);
+        
+        // Обновить статистику
+        nftStakingStats[nftContract].totalStakedNFTs++;
+        nftStakingStats[nftContract].totalStakers++;
+        nftStakingStats[nftContract].totalValueLocked = nftStakingStats[nftContract].totalValueLocked.add(stakingPower);
+        nftStakingStats[nftContract].averageStakingPower = nftStakingStats[nftContract].averageStakingPower.add(stakingPower);
+        
+        // Обновить статистику тайера
+        tier.currentStakers++;
+        
+        // Передача NFT в контракт
+        ERC721(nftContract).transferFrom(msg.sender, address(this), tokenId);
+        
+        emit NFTStaked(
+            msg.sender,
+            nftContract,
+            tokenId,
+            stakingPower,
+            tier.rewardMultiplier,
+            stakingDuration,
+            block.timestamp
+        );
+    }
+    
+    function unstakeNFT(
+        address nftContract,
+        uint256 tokenId
+    ) external {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        require(stake.isStaked, "NFT not staked");
+        require(stake.staker == msg.sender, "Not staker");
+        require(block.timestamp >= stake.stakeTime + stake.lockupPeriod, "Lockup period not expired");
+        
+        // Расчет наград
+        uint256 rewards = calculateNFTStakingRewards(nftContract, tokenId);
+        
+        // Применить комиссию
+        uint256 feeAmount = rewards.mul(stake.withdrawalFee).div(10000);
+        uint256 amountAfterFee = rewards.sub(feeAmount);
+        
+        // Обновить статистику
+        nftStakingStats[nftContract].totalRewardsDistributed = nftStakingStats[nftContract].totalRewardsDistributed.add(amountAfterFee);
+        
+        // Возврат NFT пользователю
+        ERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
+        
+        // Передача награды
+        if (amountAfterFee > 0) {
+            // Передача награды (в реальной реализации токены)
+        }
+        
+        // Деактивировать стейкинг
+        stake.isStaked = false;
+        stake.totalRewardsEarned = stake.totalRewardsEarned.add(amountAfterFee);
+        stake.lastClaimTime = block.timestamp;
+        
+        emit NFTUnstaked(
+            msg.sender,
+            nftContract,
+            tokenId,
+            amountAfterFee,
+            block.timestamp
+        );
+    }
+    
+    function claimNFTStakingRewards(
+        address nftContract,
+        uint256 tokenId
+    ) external {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        require(stake.isStaked, "NFT not staked");
+        require(stake.staker == msg.sender, "Not staker");
+        
+        // Расчет наград
+        uint256 rewards = calculateNFTStakingRewards(nftContract, tokenId);
+        require(rewards > 0, "No rewards to claim");
+        
+        // Обновить стейкинг
+        stake.pendingRewards = stake.pendingRewards.add(rewards);
+        stake.rewardDebt = stake.rewardDebt.add(rewards);
+        stake.totalRewardsEarned = stake.totalRewardsEarned.add(rewards);
+        stake.lastClaimTime = block.timestamp;
+        
+        // Передача награды
+        if (rewards > 0) {
+            // Передача награды (в реальной реализации токены)
+        }
+        
+        emit NFTStakingRewardsClaimed(
+            msg.sender,
+            nftContract,
+            tokenId,
+            rewards,
+            block.timestamp
+        );
+    }
+    
+    function calculateNFTStakingRewards(
+        address nftContract,
+        uint256 tokenId
+    ) internal view returns (uint256) {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        if (!stake.isStaked || stake.stakingDuration == 0) return 0;
+        
+        uint256 timeElapsed = block.timestamp.sub(stake.lastRewardTime);
+        uint256 baseReward = stake.stakingPower.mul(stake.rewardMultiplier).div(10000);
+        uint256 timeBonus = timeElapsed.div(3600).mul(100000000000000000); // 0.1 ETH за час
+        
+        return baseReward.add(timeBonus);
+    }
+    
+    function updateNFTStakingPower(
+        address nftContract,
+        uint256 tokenId,
+        uint256 newStakingPower
+    ) external {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        require(stake.isStaked, "NFT not staked");
+        require(stake.staker == msg.sender, "Not staker");
+        require(newStakingPower > 0, "Staking power must be greater than 0");
+        
+        uint256 oldPower = stake.stakingPower;
+        stake.stakingPower = newStakingPower;
+        stake.lastRewardTime = block.timestamp;
+        
+        // Обновить статистику
+        nftStakingStats[nftContract].totalValueLocked = nftStakingStats[nftContract].totalValueLocked.sub(oldPower).add(newStakingPower);
+        nftStakingStats[nftContract].averageStakingPower = nftStakingStats[nftContract].averageStakingPower.sub(oldPower).add(newStakingPower);
+        
+        emit NFTStakingPowerUpdated(
+            msg.sender,
+            nftContract,
+            tokenId,
+            oldPower,
+            newStakingPower,
+            block.timestamp
+        );
+    }
+    
+    function getNFTStakeInfo(address nftContract, uint256 tokenId) external view returns (NFTStake memory) {
+        return nftStakes[nftContract][tokenId];
+    }
+    
+    function getNFTStakingTier(string memory tierName) external view returns (NFTStakingTier memory) {
+        return nftStakingTiers[tierName];
+    }
+    
+    function getNFTStakingConfig(address nftContract) external view returns (NFTStakingConfig memory) {
+        return nftStakingConfigs[nftContract];
+    }
+    
+    function getNFTStakingStats(address nftContract) external view returns (NFTStakingStats memory) {
+        return nftStakingStats[nftContract];
+    }
+    
+    function getUserNFTStakes(address user, address nftContract) external view returns (uint256[] memory) {
+        return userNFTStakes[user][nftContract];
+    }
+    
+    function getNFTStakingTiers() external view returns (string[] memory) {
+        // Возвращает список всех тайеров
+        return new string[](0);
+    }
+    
+    function getStakedNFTsByUser(address user) external view returns (address[] memory, uint256[] memory) {
+        // Возвращает список всех NFT пользователя
+        return (new address[](0), new uint256[](0));
+    }
+    
+    function getNFTStakingRewards(address user, address nftContract, uint256 tokenId) external view returns (uint256) {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        if (!stake.isStaked) return 0;
+        
+        return calculateNFTStakingRewards(nftContract, tokenId);
+    }
+    
+    function getNFTStakingPower(address nftContract, uint256 tokenId) external view returns (uint256) {
+        NFTStake storage stake = nftStakes[nftContract][tokenId];
+        return stake.stakingPower;
+    }
+    
+    function getNFTStakingTierByPower(uint256 stakingPower) external view returns (string memory) {
+        // Возвращает тайер по мощности
+        return "";
+    }
+    
+    function getNFTStakingHistory(address user) external view returns (NFTStake[] memory) {
+        // Возвращает историю стейкинга пользователя
+        return new NFTStake[](0);
+    }
+    
+    function getActiveNFTStakes(address nftContract) external view returns (uint256[] memory) {
+        // Возвращает активные стейкинги для NFT контракта
+        return new uint256[](0);
+    }
+}
 }
