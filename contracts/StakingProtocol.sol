@@ -1212,7 +1212,7 @@ contract StakingProtocol is Ownable, ReentrancyGuard {
     }
     
     function getActiveNFTStakes(address nftContract) external view returns (uint256[] memory) {
-        // Возвращает активные стейкинги для NFT контракта
+     
         return new uint256[](0);
     }
 }
