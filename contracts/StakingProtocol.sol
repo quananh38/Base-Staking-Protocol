@@ -673,20 +673,6 @@ function validateUserTokenType(address user, string memory tokenTypeName) extern
     
     return keccak256(abi.encodePacked(userToken.tokenType)) == keccak256(abi.encodePacked(tokenTypeName));
 }
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
-contract StakingProtocol is Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
-
-    // Существующие структуры и функции...
-    
     // Новые структуры для NFT-базированного стейкинга
     struct NFTStake {
         uint256 tokenId;
@@ -1215,5 +1201,20 @@ contract StakingProtocol is Ownable, ReentrancyGuard {
      
         return new uint256[](0);
     }
+    // Добавить в функцию stake
+function stake(
+    address pool,
+    uint256 amount
+) external {
+    require(pool != address(0), "Invalid pool");
+    require(amount > 0, "Amount must be greater than 0");
+    require(amount <= maximumStakeAmount, "Amount exceeds maximum");
+    require(amount >= minimumStakeAmount, "Amount below minimum");
+    
+    // Добавленная проверка
+    require(amount <= type(uint256).max, "Amount overflow");
+    require(amount <= pool.totalStaked.mul(10), "Excessive stake amount");
+    
+    // Остальной код...
 }
 }
