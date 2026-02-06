@@ -814,7 +814,7 @@ function validateUserTokenType(address user, string memory tokenTypeName) extern
         uint256 timestamp
     );
     
-    // Новые функции для NFT-базированного стейкинга
+
     function createNFTStakingTier(
         string memory tierName,
         uint256 minStakingPower,
