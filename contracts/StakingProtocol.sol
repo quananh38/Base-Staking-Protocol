@@ -1055,7 +1055,7 @@ function validateUserTokenType(address user, string memory tokenTypeName) extern
         uint256 feeAmount = rewards.mul(stake.withdrawalFee).div(10000);
         uint256 amountAfterFee = rewards.sub(feeAmount);
         
-        // Обновить статистику
+
         nftStakingStats[nftContract].totalRewardsDistributed = nftStakingStats[nftContract].totalRewardsDistributed.add(amountAfterFee);
         
         // Возврат NFT пользователю
