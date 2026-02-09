@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /*
-  Educational staking:
+ Base staking:
   - lock duration
   - early withdraw penalty (sent to treasury)
 */
