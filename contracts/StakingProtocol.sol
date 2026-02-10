@@ -21,11 +21,11 @@ contract StakingProtocol is Ownable, ReentrancyGuard {
         stakeToken = IERC20(_stakeToken);
     }
 
-    function stake(uint256 amount) public nonReentrant {
+    function stake(uint256 amount) public nonReentrant { 
         require(amount > 0, "amount=0");
         stakeToken.safeTransferFrom(msg.sender, address(this), amount);
         staked[msg.sender] += amount;
-        emit Staked(msg.sender, amount);
+        emit Staked(msg.sender, amount); 
     }
 
     function stakeWithPermit(
