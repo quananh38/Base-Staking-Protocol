@@ -18,7 +18,7 @@ async function main() {
   const StakingProtocol = await ethers.getContractFactory("StakingProtocolV2");
   const stakingProtocol = await StakingProtocol.deploy(
     stakingToken.address,
-    ethers.utils.parseEther("10"), // 10 tokens per second
+    ethers.utils.parseEther("10"), 
     Math.floor(Date.now() / 1000), // Current timestamp
     Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60 // 1 year from now
   );
