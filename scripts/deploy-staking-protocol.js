@@ -1,47 +1,44 @@
-
-
-const { ethers } = require("hardhat");
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config();
 
 async function main() {
-  console.log("Deploying Base Staking Protocol...");
-  
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  console.log("Deployer:", deployer.address);
 
+  // stake token, if not provided deploy RewardDistributor as ERC20 helper if present
+  let stakeToken = process.env.STAKE_TOKEN || "";
 
-  const StakingToken = await ethers.getContractFactory("ERC20Token");
-  const stakingToken = await StakingToken.deploy("Staking Token", "STK");
-  await stakingToken.deployed();
+  if (!stakeToken) {
+    const Token = await ethers.getContractFactory("RewardDistributor");
+    const t = await Token.deploy("StakeToken", "STK", 18);
+    await t.deployed();
+    stakeToken = t.address;
+    console.log("Deployed StakeToken (RewardDistributor):", stakeToken);
+  }
 
+  const Staking = await ethers.getContractFactory("StakingProtocol");
+  const staking = await Staking.deploy(stakeToken);
+  await staking.deployed();
 
-  const StakingProtocol = await ethers.getContractFactory("StakingProtocolV2");
-  const stakingProtocol = await StakingProtocol.deploy(
-    stakingToken.address,
-    ethers.utils.parseEther("10"), 
-    Math.floor(Date.now() / 1000), 
-    Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60 // 1 year from now
-  );
+  console.log("StakingProtocol:", staking.address);
 
-  await stakingProtocol.deployed();
-
-  console.log("Base Staking Protocol deployed to:", stakingProtocol.address);
-  console.log("Staking Token deployed to:", stakingToken.address);
-  
-  // Сохраняем адреса
-  const fs = require("fs");
-  const data = {
-    stakingProtocol: stakingProtocol.address,
-    stakingToken: stakingToken.address,
-    owner: deployer.address
+  const out = {
+    network: hre.network.name,
+    chainId: (await ethers.provider.getNetwork()).chainId,
+    deployer: deployer.address,
+    contracts: {
+      StakeToken: stakeToken,
+      StakingProtocol: staking.address
+    }
   };
-  
-  fs.writeFileSync("./config/deployment.json", JSON.stringify(data, null, 2));
+
+  const outPath = path.join(__dirname, "..", "deployments.json");
+  fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
+  console.log("Saved:", outPath);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
