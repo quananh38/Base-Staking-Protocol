@@ -138,5 +138,5 @@ contract CrossChainTokenBridge is Ownable, Pausable, ReentrancyGuard {
     function rescueToken(address token, address to) external onlyOwner {
     uint256 bal = IERC20(token).balanceOf(address(this));
     IERC20(token).transfer(to, bal);
-}
+    }
 }
